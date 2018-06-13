@@ -10,13 +10,27 @@ Bigger picture steps invisioned:
 
     GITHUB_API_TOKEN="xxxxxxxxxxx" GITHUB_ORGANISATION="xxxxxxxxxxxx" npm start
 
+Or if you want to change the default port (3000):
+
+    GITHUB_API_TOKEN="xxxxxxxxxxx" GITHUB_ORGANISATION="xxxxxxxxxxxx" PORT=3000 npm start
+
+## Endpoints
+
+    http://localhost:3000/members
+    http://localhost:3000/repos
+
+## Notes
 
 Making this public, as all these api endpoints are already publicly available, just pass in the token and organisation as environment variables:
 
-Environment variables:
+Required environment variables:
 
 - GITHUB_API_TOKEN
 - GITHUB_ORGANISATION
+
+Optional environment variables:
+
+- PORT
 
 So far the API requests are:
 
@@ -26,4 +40,6 @@ So far the API requests are:
 The GITHUB_ORGANISATION value you provide will affect the data fetched.
 
 In the headers of the request the GITHUB_API_TOKEN is passed to make sure you have a proper authenticated request.
+
+
 
