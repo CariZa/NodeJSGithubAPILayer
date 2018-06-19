@@ -1,5 +1,5 @@
 # specify the node base image with your desired version node:<version>
-FROM node:6
+FROM node:8
 
 WORKDIR /usr/src/app
 
@@ -8,7 +8,6 @@ COPY . .
 
 RUN npm install
 
-# replace this with your application's default port
 ENV PORT $PORT
 ENV GITHUB_API_TOKEN $GITHUB_API_TOKEN
 ENV GITHUB_ORGANISATION $GITHUB_ORGANISATION
