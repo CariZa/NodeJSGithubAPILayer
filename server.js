@@ -2,12 +2,7 @@
 // Just a useful check if the right environment variables are set,
 // if not, tell the user
 
-let requiredEnvironmentVariables = [
-  'GITHUB_API_TOKEN',
-  'GITHUB_ORGANISATION',
-];
-
-function requiredFieldsAreValid() {
+function environmentVariablesExist(listOfEnvironmentVars) {
   let count = requiredEnvironmentVariables.length;
   // let valid = true;
   for (let i = 0; i < count; i++) {
@@ -19,14 +14,56 @@ function requiredFieldsAreValid() {
   return true;
 }
 
-if (!requiredFieldsAreValid()) {
-  console.log("ERROR: MISSING ENVIRONMENT VARIABLE!");
-  console.log("Make sure you have set these environment variables:");
-  let display = requiredEnvironmentVariables.reduce((strList, value) => {
-    return strList += value + '=xxxxxxxx ';
+
+function displayMessages(message, envVarList) {
+
+  if (typeof message === "object") {
+    message.forEach(element => {
+      console.log(element);
+    });
+  } else {
+    console.log(message);
+  }
+
+  let display = envVarList.reduce((output, value) => {
+    return output += value + '=xxxxxxxx ';
   }, "");
   console.log(display);
+
 }
+
+let requiredEnvironmentVariables = [
+  'GITHUB_API_TOKEN',
+  'GITHUB_ORGANISATION',
+];
+
+if (!environmentVariablesExist(requiredEnvironmentVariables)) {
+  console.log("==============================");
+  let invalidmessages = [
+    "ERROR: MISSING ENVIRONMENT VARIABLE!",
+    "Make sure you have set these environment variables:"
+  ];
+  displayMessages(invalidmessages, requiredEnvironmentVariables);
+  console.log("==============================");
+}
+
+let optionalEnvironmentVariables = [
+  'PORT',
+  'LOGSTASH_NAME',
+  'LOGSTASH_PORT_1',
+  'LOGSTASH_PORT_2',
+  'RESULTS_PER_PAGE'
+];
+
+// if (!environmentVariablesExist(optionalEnvironmentVariables)) {
+  let optionalmessages = [
+    "Note: There are optional variables you can set if you choose to",
+    "See list of optional variables below:"
+  ];
+  displayMessages(optionalmessages, optionalEnvironmentVariables);
+// }
+
+
 
 
 // let repos_urls = repos.map(repo =>"https://api.github.com/repos/greenbank60days/"+repo+"/commits?since="+SINCE_DATE);
@@ -35,9 +72,13 @@ if (!requiredFieldsAreValid()) {
 var express = require('express'),
   app = express(),
   logstash_name = process.env.LOGSTASH_NAME || "logstash";
+  logstash_port_1 = process.env.LOGSTASH_PORT_1 || 8061;
+  logstash_port_2 = process.env.LOGSTASH_PORT_2 || 8062;
+  per_page = process.env.RESULTS_PER_PAGE || 1000;
   port = process.env.PORT || 3000;
 
 const request = require('request');
+
 var rp = require('request-promise');
 
 app.listen(port, () => {
@@ -49,13 +90,10 @@ app.get('/members', (req, res) => {
     let url = "https://api.github.com/orgs/"+process.env.GITHUB_ORGANISATION+"/members?per_page=1000";
     fetchGithubAPIData(url)
     .then((data) => {
-      return sendGithubDataToLogstash(data, "http://"+logstash_name+":8061")
+      return sendGithubDataToLogstash(data, "http://"+logstash_name+":"+logstash_port_1)
     })
     .then((data) => {
       res.send(data);
-    }, (err) => {
-      console.log("error:", err);
-      res.send(err);
     }).catch((err) => {
       console.log("error:", err);
       res.send(err);
@@ -66,13 +104,10 @@ app.get('/repos', (req, res) => {
   let url = "https://api.github.com/orgs/"+process.env.GITHUB_ORGANISATION+"/repos?per_page=1000";
   fetchGithubAPIData(url)
   .then((data) => {
-    return sendGithubDataToLogstash(data, "http://"+logstash_name+":8062");
+    return sendGithubDataToLogstash(data, "http://"+logstash_name+":"+logstash_port_2);
   })
   .then((data) => {
     res.send(data);
-  }, (err) => {
-    console.log("error:", err);
-    res.send(err);
   }).catch((err) => {
     console.log("error:", err);
     res.send(err);
@@ -118,8 +153,6 @@ function fetchGithubAPIData(url) {
   let options = {url, headers};
   return rp(options).then((body) => {
     return body;
-  }, (err) => {
-    return err;
   });
 }
 
@@ -138,8 +171,5 @@ function sendGithubDataToLogstash(data, url) {
   };
   return rp(options).then((body) => {
     return body;
-  }, (err) => {
-    console.log("ERRRRR",err);
-    return err;
   });
 }
