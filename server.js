@@ -2,6 +2,9 @@
 // Just a useful check if the right environment variables are set,
 // if not, tell the user
 
+// Run comand from console to test the nodejs layer before adding to image
+// GITHUB_API_TOKEN=xxx GITHUB_ORGANISATION=xxx  node server.js
+
 function environmentVariablesExist(listOfEnvironmentVars) {
   let count = requiredEnvironmentVariables.length;
   // let valid = true;
@@ -65,9 +68,7 @@ let optionalEnvironmentVariables = [
 
 
 
-
 // let repos_urls = repos.map(repo =>"https://api.github.com/repos/greenbank60days/"+repo+"/commits?since="+SINCE_DATE);
-
 
 var express = require('express'),
   app = express(),
@@ -88,30 +89,37 @@ app.listen(port, () => {
 
 app.get('/members', (req, res) => {
     let url = "https://api.github.com/orgs/"+process.env.GITHUB_ORGANISATION+"/members?per_page=1000";
-    fetchGithubAPIData(url)
-    .then((data) => {
-      return sendGithubDataToLogstash(data, "http://"+logstash_name+":"+logstash_port_1)
-    })
-    .then((data) => {
-      res.send(data);
-    }).catch((err) => {
-      console.log("error:", err);
-      res.send(err);
-    });
+    let authtoken = process.env.GITHUB_API_TOKEN;
+    console.log("Get members data");
+    getData(url, authtoken)
+      .then((data) => {
+        console.log("Got members data");
+        return postData("http://"+logstash_name+":"+logstash_port_1, data)
+      })
+      .then((data) => {
+        console.log("Display members data");
+        res.send(data);
+      })
+        .catch((err) => {
+          console.log("error:", err);
+          res.send(err);
+        });
 });
 
 app.get('/repos', (req, res) => {
   let url = "https://api.github.com/orgs/"+process.env.GITHUB_ORGANISATION+"/repos?per_page=1000";
-  fetchGithubAPIData(url)
-  .then((data) => {
-    return sendGithubDataToLogstash(data, "http://"+logstash_name+":"+logstash_port_2);
-  })
-  .then((data) => {
-    res.send(data);
-  }).catch((err) => {
-    console.log("error:", err);
-    res.send(err);
-  });
+  let authtoken = process.env.GITHUB_API_TOKEN;
+  getData(url, authtoken)
+    .then((data) => {
+      return postData("http://"+logstash_name+":"+logstash_port_2, data);
+    })
+    .then((data) => {
+      res.send(data);
+    })
+      .catch((err) => {
+        console.log("error:", err);
+        res.send(err);
+      });
 });
 
 app.get('/commits', (req, res) => {
@@ -145,31 +153,44 @@ app.get('/commits', (req, res) => {
 
 // let repos_urls = repos.map(repo =>"https://api.github.com/repos/greenbank60days/"+repo+"/commits?since="+SINCE_DATE);
 
-function fetchGithubAPIData(url) {
+function getData(url, authtoken) {
+  // Note, the auth token in this case is a base64 string of the syntax: "username:password"
   let headers = {
-    'User-Agent': 'request',
-    'Authorization' : 'token  '+process.env.GITHUB_API_TOKEN
+      'User-Agent': 'request',
+      'Authorization' : 'token  '+ authtoken,
+      'Content-Type': 'application/json'
   };
   let options = {url, headers};
-  return rp(options).then((body) => {
-    return body;
+  return rp(options).then((data) => {
+      console.log("getData result: data", data);
+      return data;
   });
+
 }
 
 
-function sendGithubDataToLogstash(data, url) {
-  // let url = "http://localhost:8070";
+function postData(url, sendlogstash_data) {
+
+  if (sendlogstash_data === undefined) {
+      console.log("No logdashdata to send.");
+      return;
+  }
+
   let headers = {
-    "Content-Type": "application/json"
+      "Content-Type": "application/json"
   };
+  
   let options = {
-    method: "POST",
-    body: JSON.parse(data),
-    url, 
-    headers,
-    json: true
+      method: "POST",
+      body: JSON.parse(sendlogstash_data),
+      url, 
+      headers,
+      json: true
   };
+
   return rp(options).then((body) => {
-    return body;
+      // Send back the data for logstash so you can see what was sent
+      return sendlogstash_data;
   });
+
 }
