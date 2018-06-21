@@ -88,12 +88,20 @@ app.listen(port, () => {
 });
 
 app.get('/members', (req, res) => {
-    let url = "https://api.github.com/orgs/"+process.env.GITHUB_ORGANISATION+"/members?per_page=1000";
+    let url1 = "https://api.github.com/orgs/"+process.env.GITHUB_ORGANISATION+"/members?per_page=100&page=1";
+    let url2 = "https://api.github.com/orgs/"+process.env.GITHUB_ORGANISATION+"/members?per_page=100&page=2";
     let authtoken = process.env.GITHUB_API_TOKEN;
     console.log("Get members data");
-    getData(url, authtoken)
+    getData(url1, authtoken)
       .then((data) => {
-        console.log("Got members data");
+        console.log("Got members data page1");
+        return postData("http://"+logstash_name+":"+logstash_port_1, data)
+      })
+      .then((data) => {
+        return getData(url2, authtoken);
+      })
+      .then((data) => {
+        console.log("Got members data page2");
         return postData("http://"+logstash_name+":"+logstash_port_1, data)
       })
       .then((data) => {
